@@ -175,3 +175,38 @@ plt.ylabel('True Positive Rate')
 plt.title('ROC Curve')
 plt.legend(loc='lower right')
 plt.show()
+
+# csv сделать надо
+test_data = test.copy()
+for col in numerical_fs:
+    test_data[col] = pd.to_numeric(test_data[col], errors='coerce')
+    test_data[col] = test_data[col].fillna(test_data[col].median())
+
+test_data[binary_cols] = test_data[binary_cols].replace({'Yes': 1, 'No': 0})
+test_encoded = pd.get_dummies(test_data, columns=non_binary_cat_cols, drop_first=True)
+missing_cols = set(features_train.columns) - set(test_encoded.columns)
+for col in missing_cols:
+    test_encoded[col] = 0
+test_encoded = test_encoded[features_train.columns]
+test_encoded[numerical_fs] = scaler.transform(test_encoded[numerical_fs])
+
+logreg_probs = logreg.predict_proba(test_encoded)[:, 1]
+submission_logreg = pd.DataFrame({'Id': test.index, 'Churn': logreg_probs})
+submission_logreg.to_csv('submission_logreg.csv', index=False)
+
+mlp_probs = mlp.predict_proba(test_encoded)[:, 1]
+submission_mlp = pd.DataFrame({'Id': test.index, 'Churn': mlp_probs})
+submission_mlp.to_csv('submission_mlp.csv', index=False)
+
+test_catboost = test.copy()
+for col in numerical_fs:
+    test_catboost[col] = pd.to_numeric(test_catboost[col], errors='coerce')
+    test_catboost[col] = test_catboost[col].fillna(test_catboost[col].median())
+catboost_probs = catboost.predict_proba(test_catboost)[:, 1]
+submission_catboost = pd.DataFrame({'Id': test.index, 'Churn': catboost_probs})
+submission_catboost.to_csv('submission_catboost.csv', index=False)
+
+
+print(submission_logreg.head())
+print(submission_mlp.head())
+print(submission_catboost.head())
